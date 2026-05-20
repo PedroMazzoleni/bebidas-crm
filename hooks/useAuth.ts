@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '../lib/supabaseClient'
 
 export function useAuth(requiredRole?: 'admin' | 'comercial') {
   const router = useRouter()
@@ -13,23 +12,18 @@ export function useAuth(requiredRole?: 'admin' | 'comercial') {
 
   useEffect(() => {
     const init = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/login'); return }
+      const res = await fetch('/api/auth/me')
+      if (!res.ok) { router.push('/login'); return }
+      const data = await res.json()
 
-      const { data: profile } = await supabase
-        .from('profiles').select('full_name, role').eq('id', user.id).single()
-
-      if (!profile) { router.push('/login'); return }
-
-      // Redirect if role doesn't match
-      if (requiredRole === 'admin' && profile.role !== 'admin') {
+      if (requiredRole === 'admin' && data.role !== 'admin') {
         router.push('/user/dashboard')
         return
       }
 
-      setUserName(profile.full_name || '')
-      setUserId(user.id)
-      setRole(profile.role)
+      setUserName(data.full_name || '')
+      setUserId(data.id)
+      setRole(data.role)
       setReady(true)
     }
     init()

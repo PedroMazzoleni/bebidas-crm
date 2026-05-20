@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabaseClient'
 
 export interface Comercial {
   id: string
@@ -24,25 +23,26 @@ export function useComerciales() {
   const [loading, setLoading] = useState(true)
 
   const fetchComerciales = async () => {
-    const { data } = await supabase.from('comerciales').select('*').order('nombre')
+    const res = await fetch('/api/comerciales')
+    const data = await res.json()
     setComerciales(data || [])
     setLoading(false)
   }
 
   const crearComercial = async (form: ComercialForm) => {
-    const { error } = await supabase.from('comerciales').insert({
-      nombre: form.nombre,
-      telf: form.telf,
-      comision_asignada: parseFloat(form.comision_asignada) || 0,
+    const res = await fetch('/api/comerciales', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form),
     })
-    if (!error) await fetchComerciales()
-    return !error
+    if (res.ok) await fetchComerciales()
+    return res.ok
   }
 
   const eliminarComercial = async (id: string) => {
-    const { error } = await supabase.from('comerciales').delete().eq('id', id)
-    if (!error) await fetchComerciales()
-    return !error
+    const res = await fetch(`/api/comerciales/${id}`, { method: 'DELETE' })
+    if (res.ok) await fetchComerciales()
+    return res.ok
   }
 
   useEffect(() => { fetchComerciales() }, [])

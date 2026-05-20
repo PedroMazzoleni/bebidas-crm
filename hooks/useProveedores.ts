@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabaseClient'
 
 export interface Proveedor {
   id: string
@@ -29,24 +28,39 @@ export function useProveedores() {
   const [loading, setLoading] = useState(true)
 
   const fetchProveedores = async () => {
-    const { data } = await supabase.from('proveedores').select('*').order('nombre')
+    const res = await fetch('/api/proveedores')
+    const data = await res.json()
     setProveedores(data || [])
     setLoading(false)
   }
 
   const crearProveedor = async (form: ProveedorForm) => {
-    const { error } = await supabase.from('proveedores').insert(form)
-    if (!error) await fetchProveedores()
-    return !error
+    const res = await fetch('/api/proveedores', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form),
+    })
+    if (res.ok) await fetchProveedores()
+    return res.ok
+  }
+
+  const actualizarProveedor = async (id: string, form: ProveedorForm) => {
+    const res = await fetch(`/api/proveedores/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form),
+    })
+    if (res.ok) await fetchProveedores()
+    return res.ok
   }
 
   const eliminarProveedor = async (id: string) => {
-    const { error } = await supabase.from('proveedores').delete().eq('id', id)
-    if (!error) await fetchProveedores()
-    return !error
+    const res = await fetch(`/api/proveedores/${id}`, { method: 'DELETE' })
+    if (res.ok) await fetchProveedores()
+    return res.ok
   }
 
   useEffect(() => { fetchProveedores() }, [])
 
-  return { proveedores, loading, fetchProveedores, crearProveedor, eliminarProveedor }
+  return { proveedores, loading, fetchProveedores, crearProveedor, actualizarProveedor, eliminarProveedor }
 }

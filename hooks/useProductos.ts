@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabaseClient'
 
 export interface Producto {
   id: string
@@ -9,8 +8,8 @@ export interface Producto {
   stock: number
   precio_venta: number
   precio_compra: number
-  proveedor_id?: string
-  fecha_caducidad?: string
+  proveedor_id?: string | null
+  fecha_caducidad?: string | null
   proveedores?: { nombre: string }
 }
 
@@ -35,36 +34,39 @@ export function useProductos() {
   const [loading, setLoading] = useState(true)
 
   const fetchProductos = async () => {
-    const { data } = await supabase
-      .from('productos')
-      .select('*, proveedores(nombre)')
-      .order('nombre')
+    const res = await fetch('/api/productos')
+    const data = await res.json()
     setProductos(data || [])
     setLoading(false)
   }
 
   const crearProducto = async (form: ProductoForm) => {
-    const { error } = await supabase.from('productos').insert({
-      nombre: form.nombre,
-      marca: form.marca,
-      categoria: form.categoria,
-      stock: parseInt(form.stock) || 0,
-      precio_venta: parseFloat(form.precio_venta) || 0,
-      precio_compra: parseFloat(form.precio_compra) || 0,
-      proveedor_id: form.proveedor_id || null,
-      fecha_caducidad: form.fecha_caducidad || null,
+    const res = await fetch('/api/productos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form),
     })
-    if (!error) await fetchProductos()
-    return !error
+    if (res.ok) await fetchProductos()
+    return res.ok
+  }
+
+  const actualizarProducto = async (id: string, form: ProductoForm) => {
+    const res = await fetch(`/api/productos/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form),
+    })
+    if (res.ok) await fetchProductos()
+    return res.ok
   }
 
   const eliminarProducto = async (id: string) => {
-    const { error } = await supabase.from('productos').delete().eq('id', id)
-    if (!error) await fetchProductos()
-    return !error
+    const res = await fetch(`/api/productos/${id}`, { method: 'DELETE' })
+    if (res.ok) await fetchProductos()
+    return res.ok
   }
 
   useEffect(() => { fetchProductos() }, [])
 
-  return { productos, loading, fetchProductos, crearProducto, eliminarProducto }
+  return { productos, loading, fetchProductos, crearProducto, actualizarProducto, eliminarProducto }
 }

@@ -2,21 +2,24 @@
 
 import { colors, thStyle, tdStyle } from './ui/styles'
 import { Pedido } from '../hooks/usePedidos'
+import { generateInvoice } from '../lib/generateInvoice'
+import { FileText, Edit2 } from 'lucide-react'
 
 const estadoColor: Record<string, string> = {
-  pendiente: '#f59e0b',
-  confirmado: '#3b82f6',
-  entregado: '#10b981',
+  pendiente: '#eab308',
+  confirmado: '#f97316',
+  entregado: '#22c55e',
   cancelado: '#ef4444',
 }
 
 interface PedidosTableProps {
   pedidos: Pedido[]
   onCambiarEstado?: (id: string, estado: string) => void
+  onEditar?: (p: Pedido) => void
   soloLectura?: boolean
 }
 
-export default function PedidosTable({ pedidos, onCambiarEstado, soloLectura }: PedidosTableProps) {
+export default function PedidosTable({ pedidos, onCambiarEstado, onEditar, soloLectura }: PedidosTableProps) {
   if (pedidos.length === 0) {
     return (
       <div style={{ textAlign: 'center', padding: '60px', color: colors.textDim }}>
@@ -30,7 +33,7 @@ export default function PedidosTable({ pedidos, onCambiarEstado, soloLectura }: 
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr style={{ borderBottom: `1px solid ${colors.border}` }}>
-            {['Nº Pedido', 'Fecha', 'Cliente', 'Comercial', 'Total', 'Estado'].map(h => (
+            {['Nº Pedido', 'Fecha', 'Cliente', 'Comercial', 'Total', 'Estado', ''].map(h => (
               <th key={h} style={thStyle}>{h}</th>
             ))}
           </tr>
@@ -41,7 +44,7 @@ export default function PedidosTable({ pedidos, onCambiarEstado, soloLectura }: 
             return (
               <tr key={p.id}
                 style={{ borderBottom: `1px solid ${colors.border}` }}
-                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#1a1f2e'}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#1c1c1e'}
                 onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}>
                 <td style={{ ...tdStyle, color: colors.primary, fontWeight: 700 }}>#{p.num_pedido}</td>
                 <td style={tdStyle}>{p.fecha}</td>
@@ -61,7 +64,8 @@ export default function PedidosTable({ pedidos, onCambiarEstado, soloLectura }: 
                         background: color + '20', color,
                         border: `1px solid ${color}40`,
                         borderRadius: 6, padding: '4px 8px', fontSize: 12,
-                        fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+                        fontWeight: 600, cursor: 'pointer',
+                        fontFamily: 'var(--font-sans), system-ui, sans-serif',
                       }}>
                       <option value="pendiente">Pendiente</option>
                       <option value="confirmado">Confirmado</option>
@@ -69,6 +73,40 @@ export default function PedidosTable({ pedidos, onCambiarEstado, soloLectura }: 
                       <option value="cancelado">Cancelado</option>
                     </select>
                   )}
+                </td>
+                <td style={tdStyle}>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    {onEditar && (
+                      <button
+                        onClick={() => onEditar(p)}
+                        style={{ background: 'transparent', border: `1px solid ${colors.border}`, borderRadius: 6, color: colors.primary, padding: '4px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}
+                      >
+                        <Edit2 size={12} /> Editar
+                      </button>
+                    )}
+                    <button
+                      onClick={() => generateInvoice(p.id)}
+                      title="Generar factura"
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        background: 'transparent', border: `1px solid ${colors.border2}`,
+                        borderRadius: 6, color: colors.textMuted, padding: '5px 10px',
+                        cursor: 'pointer', fontSize: 12,
+                        fontFamily: 'var(--font-sans), system-ui, sans-serif',
+                      }}
+                      onMouseEnter={e => {
+                        (e.currentTarget as HTMLElement).style.background = 'rgba(249,115,22,0.1)'
+                        ;(e.currentTarget as HTMLElement).style.color = '#f97316'
+                        ;(e.currentTarget as HTMLElement).style.borderColor = '#f97316'
+                      }}
+                      onMouseLeave={e => {
+                        (e.currentTarget as HTMLElement).style.background = 'transparent'
+                        ;(e.currentTarget as HTMLElement).style.color = colors.textMuted
+                        ;(e.currentTarget as HTMLElement).style.borderColor = colors.border2
+                      }}>
+                      <FileText size={13} /> PDF
+                    </button>
+                  </div>
                 </td>
               </tr>
             )

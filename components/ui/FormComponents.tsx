@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import { inputStyle, colors } from './styles'
 
 interface FormFieldProps {
@@ -70,7 +71,7 @@ export function SearchBar({ value, onChange, placeholder = 'Buscar...' }: Search
 interface StatCardProps {
   label: string
   value: string | number
-  icon: string
+  icon: React.ReactNode
   color: string
   onClick?: () => void
 }
@@ -80,7 +81,7 @@ export function StatCard({ label, value, icon, color, onClick }: StatCardProps) 
     <div
       onClick={onClick}
       style={{
-        background: '#0f1117', border: '1px solid #1e2130',
+        background: colors.surface, border: `1px solid ${colors.border}`,
         borderRadius: 12, padding: '24px 28px',
         cursor: onClick ? 'pointer' : 'default', transition: 'all 0.2s',
       }}
@@ -92,20 +93,20 @@ export function StatCard({ label, value, icon, color, onClick }: StatCardProps) 
       }}
       onMouseLeave={e => {
         if (onClick) {
-          (e.currentTarget as HTMLElement).style.borderColor = '#1e2130'
+          (e.currentTarget as HTMLElement).style.borderColor = colors.border
           ;(e.currentTarget as HTMLElement).style.transform = 'translateY(0)'
         }
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <div style={{ color: '#6b7280', fontSize: 13, marginBottom: 8 }}>{label}</div>
-          <div style={{ color: '#f9fafb', fontSize: 34, fontWeight: 700 }}>{value}</div>
+          <div style={{ color: colors.textDim, fontSize: 13, marginBottom: 8 }}>{label}</div>
+          <div style={{ color: colors.text, fontSize: 34, fontWeight: 700 }}>{value}</div>
         </div>
         <div style={{
           width: 44, height: 44, borderRadius: 10,
           background: color + '20',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', color,
         }}>{icon}</div>
       </div>
     </div>
@@ -123,14 +124,14 @@ export function PageHeader({ title, subtitle, onNew, newLabel = '+ Nuevo' }: Pag
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
       <div>
-        <h1 style={{ color: '#f9fafb', fontSize: 26, fontWeight: 700, margin: 0 }}>{title}</h1>
-        {subtitle && <p style={{ color: '#6b7280', marginTop: 4, fontSize: 14 }}>{subtitle}</p>}
+        <h1 style={{ color: colors.text, fontSize: 26, fontWeight: 700, margin: 0 }}>{title}</h1>
+        {subtitle && <p style={{ color: colors.textDim, marginTop: 4, fontSize: 14 }}>{subtitle}</p>}
       </div>
       {onNew && (
         <button onClick={onNew} style={{
-          padding: '10px 20px', background: '#3b82f6', border: 'none',
+          padding: '10px 20px', background: colors.primary, border: 'none',
           borderRadius: 8, color: '#fff', fontSize: 14, fontWeight: 600,
-          cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+          cursor: 'pointer', fontFamily: 'var(--font-sans), system-ui, sans-serif',
         }}>{newLabel}</button>
       )}
     </div>
@@ -144,9 +145,9 @@ interface DeleteButtonProps {
 export function DeleteButton({ onClick }: DeleteButtonProps) {
   return (
     <button onClick={onClick} style={{
-      background: 'transparent', border: '1px solid #374151',
-      borderRadius: 6, color: '#ef4444', padding: '4px 10px',
-      cursor: 'pointer', fontSize: 12, fontFamily: "'DM Sans', sans-serif",
+      background: 'transparent', border: `1px solid ${colors.border}`,
+      borderRadius: 6, color: colors.danger, padding: '4px 10px',
+      cursor: 'pointer', fontSize: 12, fontFamily: 'var(--font-sans), system-ui, sans-serif',
     }}>Eliminar</button>
   )
 }

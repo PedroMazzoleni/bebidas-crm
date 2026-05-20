@@ -1,0 +1,87 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Profile {
+  id        String @id @default(uuid())
+  email     String @unique
+  password  String
+  full_name String
+  role      String
+  status    String @default("active")
+}
+
+model Comercial {
+  id                String    @id @default(uuid())
+  nombre            String
+  telf              String    @default("")
+  ventas            Float     @default(0)
+  comision_asignada Float     @default(0)
+  clientes          Cliente[]
+  pedidos           Pedido[]
+}
+
+model Cliente {
+  id             String     @id @default(uuid())
+  nombre_cliente String
+  telf           String     @default("")
+  direccion      String     @default("")
+  zona           String     @default("")
+  total_compras  Float      @default(0)
+  comercial_clie String?
+  comercial      Comercial? @relation(fields: [comercial_clie], references: [id])
+  pedidos        Pedido[]
+}
+
+model Proveedor {
+  id        String     @id @default(uuid())
+  nombre    String
+  direccion String     @default("")
+  mail      String     @default("")
+  tipo_iva  String     @default("")
+  nif       String     @default("")
+  telefono  String     @default("")
+  productos Producto[]
+}
+
+model Producto {
+  id              String        @id @default(uuid())
+  nombre          String
+  marca           String        @default("")
+  categoria       String        @default("")
+  stock           Int           @default(0)
+  precio_venta    Float         @default(0)
+  precio_compra   Float         @default(0)
+  proveedor_id    String?
+  fecha_caducidad String?
+  proveedor       Proveedor?    @relation(fields: [proveedor_id], references: [id])
+  lineas          LineaPedido[]
+}
+
+model Pedido {
+  id           String        @id @default(uuid())
+  num_pedido   Int
+  fecha        String
+  estado       String        @default("pendiente")
+  total        Float         @default(0)
+  cliente_id   String
+  comercial_id String?
+  cliente      Cliente       @relation(fields: [cliente_id], references: [id])
+  comercial    Comercial?    @relation(fields: [comercial_id], references: [id])
+  lineas       LineaPedido[]
+}
+
+model LineaPedido {
+  id           String   @id @default(uuid())
+  pedido_id    String
+  producto_id  String
+  cantidad     Int
+  precio_venta Float
+  pedido       Pedido   @relation(fields: [pedido_id], references: [id], onDelete: Cascade)
+  producto     Producto @relation(fields: [producto_id], references: [id])
+}

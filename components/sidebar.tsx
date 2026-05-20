@@ -1,8 +1,11 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { supabase } from '../lib/supabaseClient';
+import {
+  LayoutDashboard, Package, Users, Warehouse, Wine, Briefcase, LogOut,
+} from 'lucide-react';
 
 interface SidebarProps {
   role: 'admin' | 'comercial';
@@ -10,18 +13,19 @@ interface SidebarProps {
 }
 
 const adminLinks = [
-  { href: '/admin/dashboard', label: 'Inicio', icon: '⊞' },
-  { href: '/admin/dashboard/pedidos', label: 'Pedidos', icon: '📦' },
-  { href: '/admin/dashboard/clientes', label: 'Clientes', icon: '👥' },
-  { href: '/admin/dashboard/proveedores', label: 'Proveedores', icon: '🏭' },
-  { href: '/admin/dashboard/productos', label: 'Productos', icon: '🍶' },
-  { href: '/admin/dashboard/comerciales', label: 'Comerciales', icon: '👤' },
+  { href: '/admin/dashboard', label: 'Inicio', Icon: LayoutDashboard },
+  { href: '/admin/dashboard/pedidos', label: 'Pedidos', Icon: Package },
+  { href: '/admin/dashboard/clientes', label: 'Clientes', Icon: Users },
+  { href: '/admin/dashboard/proveedores', label: 'Proveedores', Icon: Warehouse },
+  { href: '/admin/dashboard/productos', label: 'Productos', Icon: Wine },
+  { href: '/admin/dashboard/comerciales', label: 'Comerciales', Icon: Briefcase },
 ];
 
 const comercialLinks = [
-  { href: '/user/dashboard', label: 'Inicio', icon: '⊞' },
-  { href: '/user/dashboard/pedidos', label: 'Pedidos', icon: '📦' },
-  { href: '/user/dashboard/clientes', label: 'Clientes', icon: '👥' },
+  { href: '/user/dashboard', label: 'Inicio', Icon: LayoutDashboard },
+  { href: '/user/dashboard/pedidos', label: 'Pedidos', Icon: Package },
+  { href: '/user/dashboard/clientes', label: 'Clientes', Icon: Users },
+  { href: '/user/dashboard/productos', label: 'Productos', Icon: Wine },
 ];
 
 export default function Sidebar({ role, userName }: SidebarProps) {
@@ -30,7 +34,7 @@ export default function Sidebar({ role, userName }: SidebarProps) {
   const links = role === 'admin' ? adminLinks : comercialLinks;
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await fetch('/api/auth/logout', { method: 'POST' });
     router.push('/login');
   };
 
@@ -38,40 +42,41 @@ export default function Sidebar({ role, userName }: SidebarProps) {
     <aside style={{
       width: 240,
       minHeight: '100vh',
-      background: '#0f1117',
-      borderRight: '1px solid #1e2130',
+      background: '#111113',
+      borderRight: '1px solid #27272a',
       display: 'flex',
       flexDirection: 'column',
       padding: '0',
-      fontFamily: "'DM Sans', sans-serif",
+      fontFamily: 'var(--font-sans), system-ui, sans-serif',
       position: 'fixed',
       top: 0,
       left: 0,
       zIndex: 100,
     }}>
-      {/* Logo */}
       <div style={{
-        padding: '28px 24px 20px',
-        borderBottom: '1px solid #1e2130',
+        padding: '20px 20px 16px',
+        borderBottom: '1px solid #27272a',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
-            width: 36, height: 36,
-            background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-            borderRadius: 8,
+            width: 40, height: 40,
+            borderRadius: 10,
+            overflow: 'hidden',
+            flexShrink: 0,
+            background: '#1c1009',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 18,
-          }}>🍺</div>
+          }}>
+            <Image src="/logo.png" alt="Logo" width={36} height={36} style={{ objectFit: 'contain' }} />
+          </div>
           <div>
-            <div style={{ color: '#fff', fontWeight: 700, fontSize: 15, letterSpacing: '-0.3px' }}>BEBIDAS</div>
-            <div style={{ color: '#3b82f6', fontSize: 11, fontWeight: 600, letterSpacing: '1px' }}>CRM</div>
+            <div style={{ color: '#fafafa', fontWeight: 700, fontSize: 14, letterSpacing: '-0.3px' }}>BEBIDAS</div>
+            <div style={{ color: '#f97316', fontSize: 10, fontWeight: 700, letterSpacing: '1.5px' }}>CRM</div>
           </div>
         </div>
       </div>
 
-      {/* Nav links */}
-      <nav style={{ flex: 1, padding: '16px 12px' }}>
-        <div style={{ fontSize: 10, color: '#4b5563', fontWeight: 700, letterSpacing: '1.5px', padding: '0 12px 8px' }}>
+      <nav style={{ flex: 1, padding: '12px 10px' }}>
+        <div style={{ fontSize: 10, color: '#52525b', fontWeight: 700, letterSpacing: '1.5px', padding: '0 10px 8px' }}>
           MENÚ
         </div>
         {links.map((link) => {
@@ -81,12 +86,12 @@ export default function Sidebar({ role, userName }: SidebarProps) {
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 12,
-                padding: '10px 12px',
+                gap: 10,
+                padding: '9px 10px',
                 borderRadius: 8,
                 marginBottom: 2,
-                background: isActive ? '#1e2d4a' : 'transparent',
-                color: isActive ? '#3b82f6' : '#9ca3af',
+                background: isActive ? 'rgba(249, 115, 22, 0.12)' : 'transparent',
+                color: isActive ? '#f97316' : '#71717a',
                 fontSize: 14,
                 fontWeight: isActive ? 600 : 400,
                 cursor: 'pointer',
@@ -94,17 +99,17 @@ export default function Sidebar({ role, userName }: SidebarProps) {
               }}
               onMouseEnter={e => {
                 if (!isActive) {
-                  (e.currentTarget as HTMLElement).style.background = '#1a1f2e';
-                  (e.currentTarget as HTMLElement).style.color = '#e5e7eb';
+                  (e.currentTarget as HTMLElement).style.background = '#1c1c1e';
+                  (e.currentTarget as HTMLElement).style.color = '#d4d4d8';
                 }
               }}
               onMouseLeave={e => {
                 if (!isActive) {
                   (e.currentTarget as HTMLElement).style.background = 'transparent';
-                  (e.currentTarget as HTMLElement).style.color = '#9ca3af';
+                  (e.currentTarget as HTMLElement).style.color = '#71717a';
                 }
               }}>
-                <span style={{ fontSize: 16 }}>{link.icon}</span>
+                <link.Icon size={16} />
                 {link.label}
               </div>
             </Link>
@@ -112,46 +117,46 @@ export default function Sidebar({ role, userName }: SidebarProps) {
         })}
       </nav>
 
-      {/* User + logout */}
       <div style={{
-        padding: '16px 12px',
-        borderTop: '1px solid #1e2130',
+        padding: '12px 10px',
+        borderTop: '1px solid #27272a',
       }}>
         <div style={{
           display: 'flex', alignItems: 'center', gap: 10,
-          padding: '10px 12px', borderRadius: 8,
-          background: '#1a1f2e', marginBottom: 8,
+          padding: '10px', borderRadius: 8,
+          background: '#1c1c1e', marginBottom: 8,
         }}>
           <div style={{
-            width: 32, height: 32, borderRadius: '50%',
-            background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+            width: 30, height: 30, borderRadius: '50%',
+            background: 'linear-gradient(135deg, #f97316, #dc2626)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#fff', fontWeight: 700, fontSize: 13,
+            color: '#fff', fontWeight: 700, fontSize: 13, flexShrink: 0,
           }}>
             {userName.charAt(0).toUpperCase()}
           </div>
-          <div>
-            <div style={{ color: '#e5e7eb', fontSize: 13, fontWeight: 600 }}>{userName}</div>
-            <div style={{ color: '#6b7280', fontSize: 11 }}>{role}</div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ color: '#e4e4e7', fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{userName}</div>
+            <div style={{ color: '#52525b', fontSize: 11 }}>{role}</div>
           </div>
         </div>
         <button onClick={handleLogout} style={{
-          width: '100%', padding: '9px 12px',
-          background: 'transparent', border: '1px solid #1e2130',
-          borderRadius: 8, color: '#6b7280', fontSize: 13,
+          width: '100%', padding: '8px 10px',
+          background: 'transparent', border: '1px solid #27272a',
+          borderRadius: 8, color: '#71717a', fontSize: 13,
           cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
+          fontFamily: 'var(--font-sans), system-ui, sans-serif',
         }}
         onMouseEnter={e => {
-          (e.currentTarget as HTMLElement).style.background = '#1a1f2e';
+          (e.currentTarget as HTMLElement).style.background = '#1c1c1e';
           (e.currentTarget as HTMLElement).style.color = '#ef4444';
-          (e.currentTarget as HTMLElement).style.borderColor = '#ef4444';
+          (e.currentTarget as HTMLElement).style.borderColor = '#ef444440';
         }}
         onMouseLeave={e => {
           (e.currentTarget as HTMLElement).style.background = 'transparent';
-          (e.currentTarget as HTMLElement).style.color = '#6b7280';
-          (e.currentTarget as HTMLElement).style.borderColor = '#1e2130';
+          (e.currentTarget as HTMLElement).style.color = '#71717a';
+          (e.currentTarget as HTMLElement).style.borderColor = '#27272a';
         }}>
-          🚪 Cerrar sesión
+          <LogOut size={14} /> Cerrar sesión
         </button>
       </div>
     </aside>

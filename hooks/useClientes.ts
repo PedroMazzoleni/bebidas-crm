@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabaseClient'
 
 export interface Cliente {
   id: string
   nombre_cliente: string
   telf: string
   direccion: string
+  zona: string
   total_compras: number
   comercial_clie?: string
   comerciales?: { nombre: string }
@@ -15,6 +15,7 @@ export interface ClienteForm {
   nombre_cliente: string
   telf: string
   direccion: string
+  zona: string
   comercial_clie: string
 }
 
@@ -23,32 +24,39 @@ export function useClientes() {
   const [loading, setLoading] = useState(true)
 
   const fetchClientes = async () => {
-    const { data } = await supabase
-      .from('clientes')
-      .select('*, comerciales(nombre)')
-      .order('nombre_cliente')
+    const res = await fetch('/api/clientes')
+    const data = await res.json()
     setClientes(data || [])
     setLoading(false)
   }
 
   const crearCliente = async (form: ClienteForm) => {
-    const { error } = await supabase.from('clientes').insert({
-      nombre_cliente: form.nombre_cliente,
-      telf: form.telf,
-      direccion: form.direccion,
-      comercial_clie: form.comercial_clie || null,
+    const res = await fetch('/api/clientes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form),
     })
-    if (!error) await fetchClientes()
-    return !error
+    if (res.ok) await fetchClientes()
+    return res.ok
+  }
+
+  const actualizarCliente = async (id: string, form: ClienteForm) => {
+    const res = await fetch(`/api/clientes/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form),
+    })
+    if (res.ok) await fetchClientes()
+    return res.ok
   }
 
   const eliminarCliente = async (id: string) => {
-    const { error } = await supabase.from('clientes').delete().eq('id', id)
-    if (!error) await fetchClientes()
-    return !error
+    const res = await fetch(`/api/clientes/${id}`, { method: 'DELETE' })
+    if (res.ok) await fetchClientes()
+    return res.ok
   }
 
   useEffect(() => { fetchClientes() }, [])
 
-  return { clientes, loading, fetchClientes, crearCliente, eliminarCliente }
+  return { clientes, loading, fetchClientes, crearCliente, actualizarCliente, eliminarCliente }
 }

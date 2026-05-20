@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useComerciales, emptyComercialForm, ComercialForm } from '../../../../hooks/useComerciales'
 import { useAuth } from '../../../../hooks/useAuth'
 import Sidebar from '../../../../components/sidebar'
@@ -8,10 +9,12 @@ import Modal from '../../../../components/ui/Modal'
 import { FormField, PageHeader, DeleteButton } from '../../../../components/ui/FormComponents'
 import { StatCard } from '../../../../components/ui/FormComponents'
 import { colors, thStyle, tdStyle } from '../../../../components/ui/styles'
+import { UserCircle, TrendingUp, BarChart2 } from 'lucide-react'
 
 export default function ComercialPage() {
   const { userName } = useAuth('admin')
   const { comerciales, loading, crearComercial, eliminarComercial } = useComerciales()
+  const router = useRouter()
 
   const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState<ComercialForm>(emptyComercialForm)
@@ -36,7 +39,7 @@ export default function ComercialPage() {
     : 0
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#080b12', fontFamily: "'DM Sans', sans-serif" }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#09090b', fontFamily: 'var(--font-sans), system-ui, sans-serif' }}>
       <Sidebar role="admin" userName={userName} />
       <main style={{ marginLeft: 240, flex: 1, padding: '40px 48px' }}>
 
@@ -48,9 +51,9 @@ export default function ComercialPage() {
         />
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 28 }}>
-          <StatCard label="Total comerciales" value={comerciales.length} icon="👤" color={colors.primary} />
-          <StatCard label="Ventas totales" value={`€${totalVentas.toFixed(2)}`} icon="💰" color={colors.success} />
-          <StatCard label="Comisión media" value={`${comisionMedia}%`} icon="📊" color={colors.warning} />
+          <StatCard label="Total comerciales" value={comerciales.length} icon={<UserCircle size={22} />} color={colors.primary} />
+          <StatCard label="Ventas totales" value={`€${totalVentas.toFixed(2)}`} icon={<TrendingUp size={22} />} color={colors.success} />
+          <StatCard label="Comisión media" value={`${comisionMedia}%`} icon={<BarChart2 size={22} />} color={colors.warning} />
         </div>
 
         {loading ? <p style={{ color: '#6b7280' }}>Cargando...</p> : (
@@ -65,14 +68,15 @@ export default function ComercialPage() {
               </thead>
               <tbody>
                 {comerciales.map(c => (
-                  <tr key={c.id} style={{ borderBottom: `1px solid ${colors.border}` }}
-                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#1a1f2e'}
+                  <tr key={c.id} style={{ borderBottom: `1px solid ${colors.border}`, cursor: 'pointer' }}
+                    onClick={() => router.push(`/admin/dashboard/comerciales/${c.id}`)}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#1c1c1e'}
                     onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}>
                     <td style={{ ...tdStyle, color: colors.text, fontWeight: 500 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <div style={{
                           width: 32, height: 32, borderRadius: '50%',
-                          background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                          background: 'linear-gradient(135deg, #f97316, #dc2626)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           color: '#fff', fontWeight: 700, fontSize: 13,
                         }}>{c.nombre.charAt(0).toUpperCase()}</div>
@@ -82,11 +86,11 @@ export default function ComercialPage() {
                     <td style={tdStyle}>{c.telf || '—'}</td>
                     <td style={{ ...tdStyle, color: colors.success, fontWeight: 600 }}>€{(c.ventas || 0).toFixed(2)}</td>
                     <td style={tdStyle}>
-                      <span style={{ background: '#1e2d4a', color: colors.primary, padding: '4px 10px', borderRadius: 6, fontSize: 13, fontWeight: 600 }}>
+                      <span style={{ background: 'rgba(249,115,22,0.1)', color: colors.primary, padding: '4px 10px', borderRadius: 6, fontSize: 13, fontWeight: 600 }}>
                         {c.comision_asignada || 0}%
                       </span>
                     </td>
-                    <td style={tdStyle}>
+                    <td style={tdStyle} onClick={e => e.stopPropagation()}>
                       <DeleteButton onClick={() => { if (confirm('¿Eliminar?')) eliminarComercial(c.id) }} />
                     </td>
                   </tr>

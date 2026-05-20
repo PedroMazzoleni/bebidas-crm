@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '../../../../lib/supabaseClient';
 import Sidebar from '../../../../components/sidebar';
+import { colors, thStyle, tdStyle } from '../../../../components/ui/styles';
 
 interface Pedido {
   id: string;
@@ -30,28 +30,27 @@ export default function UserPedidosPage() {
 
   useEffect(() => {
     const init = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/login'); return; }
-      const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
-      setUserName(profile?.full_name || 'Comercial');
+      const meRes = await fetch('/api/auth/me');
+      if (!meRes.ok) { router.push('/login'); return; }
+      const me = await meRes.json();
+      setUserName(me.full_name || 'Comercial');
 
-      const { data: comercial } = await supabase
-        .from('comerciales').select('id').eq('nombre', profile?.full_name).single();
-
-      if (comercial) {
-        setComercialId(comercial.id);
-        const { data } = await supabase
-          .from('pedidos')
-          .select('*, clientes(nombre_cliente)')
-          .eq('comercial_id', comercial.id)
-          .order('num_pedido', { ascending: false });
-        setPedidos(data || []);
-
-        const { data: clis } = await supabase.from('clientes').select('id, nombre_cliente').eq('comercial_clie', comercial.id);
-        setClientes(clis || []);
+      const statsRes = await fetch('/api/stats/user');
+      if (statsRes.ok) {
+        const stats = await statsRes.json();
+        if (stats.comercialId) {
+          setComercialId(stats.comercialId);
+          const [pedidosRes, clientesRes] = await Promise.all([
+            fetch(`/api/pedidos?comercial_id=${stats.comercialId}`),
+            fetch(`/api/clientes?comercial_id=${stats.comercialId}`),
+          ]);
+          if (pedidosRes.ok) setPedidos(await pedidosRes.json());
+          if (clientesRes.ok) setClientes(await clientesRes.json());
+        }
       }
-      const { data: prods } = await supabase.from('productos').select('id, nombre, precio_venta').order('nombre');
-      setProductos(prods || []);
+
+      const prodsRes = await fetch('/api/productos');
+      if (prodsRes.ok) setProductos(await prodsRes.json());
       setLoading(false);
     };
     init();
@@ -61,37 +60,32 @@ export default function UserPedidosPage() {
     if (!form.cliente_id || !comercialId) return;
     setSaving(true);
     const total = lineas.reduce((sum, l) => sum + l.cantidad * l.precio_venta, 0);
-    const { data: pedido } = await supabase.from('pedidos').insert({
-      cliente_id: form.cliente_id,
-      comercial_id: comercialId,
-      fecha: form.fecha || new Date().toISOString().split('T')[0],
-      estado: form.estado,
-      total,
-    }).select().single();
+    const res = await fetch('/api/pedidos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        cliente_id: form.cliente_id,
+        comercial_id: comercialId,
+        fecha: form.fecha || new Date().toISOString().split('T')[0],
+        estado: form.estado,
+        total,
+        lineas: lineas.filter(l => l.producto_id && l.cantidad > 0),
+      }),
+    });
 
-    if (pedido) {
-      const lineasValidas = lineas.filter(l => l.producto_id && l.cantidad > 0);
-      if (lineasValidas.length > 0) {
-        await supabase.from('lineas_pedido').insert(lineasValidas.map(l => ({
-          pedido_id: pedido.id, producto_id: l.producto_id,
-          cantidad: l.cantidad, precio_venta: l.precio_venta,
-        })));
-      }
+    if (res.ok) {
+      const pedidosRes = await fetch(`/api/pedidos?comercial_id=${comercialId}`);
+      if (pedidosRes.ok) setPedidos(await pedidosRes.json());
     }
 
     setForm({ cliente_id: '', fecha: '', estado: 'pendiente' });
     setLineas([{ producto_id: '', cantidad: 1, precio_venta: 0 }]);
     setShowModal(false);
-
-    // Refresh
-    const { data } = await supabase.from('pedidos').select('*, clientes(nombre_cliente)')
-      .eq('comercial_id', comercialId).order('num_pedido', { ascending: false });
-    setPedidos(data || []);
     setSaving(false);
   };
 
   const estadoColor: Record<string, string> = {
-    pendiente: '#f59e0b', confirmado: '#3b82f6', entregado: '#10b981', cancelado: '#ef4444',
+    pendiente: '#eab308', confirmado: '#f97316', entregado: '#22c55e', cancelado: '#ef4444',
   };
 
   const filtered = pedidos.filter(p =>
@@ -100,24 +94,24 @@ export default function UserPedidosPage() {
   );
 
   const inputStyle = {
-    width: '100%', padding: '10px 12px', background: '#0f1117',
-    border: '1px solid #2d3348', borderRadius: 8, color: '#e5e7eb',
-    fontSize: 14, fontFamily: "'DM Sans', sans-serif", boxSizing: 'border-box' as const,
+    width: '100%', padding: '10px 12px', background: colors.surface,
+    border: `1px solid ${colors.border2}`, borderRadius: 8, color: colors.text,
+    fontSize: 14, fontFamily: 'var(--font-sans), system-ui, sans-serif', boxSizing: 'border-box' as const,
   };
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#080b12', fontFamily: "'DM Sans', sans-serif" }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: colors.bg, fontFamily: 'var(--font-sans), system-ui, sans-serif' }}>
       <Sidebar role="comercial" userName={userName} />
       <main style={{ marginLeft: 240, flex: 1, padding: '40px 48px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
           <div>
-            <h1 style={{ color: '#f9fafb', fontSize: 26, fontWeight: 700, margin: 0 }}>Mis Pedidos</h1>
-            <p style={{ color: '#6b7280', marginTop: 4, fontSize: 14 }}>{pedidos.length} pedidos</p>
+            <h1 style={{ color: colors.text, fontSize: 26, fontWeight: 700, margin: 0 }}>Mis Pedidos</h1>
+            <p style={{ color: colors.textDim, marginTop: 4, fontSize: 14 }}>{pedidos.length} pedidos</p>
           </div>
           <button onClick={() => setShowModal(true)} style={{
-            padding: '10px 20px', background: '#3b82f6', border: 'none',
+            padding: '10px 20px', background: colors.primary, border: 'none',
             borderRadius: 8, color: '#fff', fontSize: 14, fontWeight: 600,
-            cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+            cursor: 'pointer', fontFamily: 'var(--font-sans), system-ui, sans-serif',
           }}>+ Nuevo pedido</button>
         </div>
 
@@ -128,26 +122,26 @@ export default function UserPedidosPage() {
           style={{ ...inputStyle, marginBottom: 20, maxWidth: 400 }}
         />
 
-        {loading ? <p style={{ color: '#6b7280' }}>Cargando...</p> : (
-          <div style={{ background: '#0f1117', border: '1px solid #1e2130', borderRadius: 12, overflow: 'hidden' }}>
+        {loading ? <p style={{ color: colors.textDim }}>Cargando...</p> : (
+          <div style={{ background: colors.surface, border: `1px solid ${colors.border}`, borderRadius: 12, overflow: 'hidden' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid #1e2130' }}>
+                <tr style={{ borderBottom: `1px solid ${colors.border}` }}>
                   {['Nº Pedido', 'Fecha', 'Cliente', 'Total', 'Estado'].map(h => (
-                    <th key={h} style={{ padding: '14px 20px', textAlign: 'left', color: '#6b7280', fontSize: 12, fontWeight: 600 }}>{h}</th>
+                    <th key={h} style={thStyle}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {filtered.map(p => (
-                  <tr key={p.id} style={{ borderBottom: '1px solid #1e2130' }}
-                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#1a1f2e'}
+                  <tr key={p.id} style={{ borderBottom: `1px solid ${colors.border}` }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#1c1c1e'}
                     onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}>
-                    <td style={{ padding: '14px 20px', color: '#3b82f6', fontWeight: 700 }}>#{p.num_pedido}</td>
-                    <td style={{ padding: '14px 20px', color: '#9ca3af' }}>{p.fecha}</td>
-                    <td style={{ padding: '14px 20px', color: '#e5e7eb', fontWeight: 500 }}>{p.clientes?.nombre_cliente || '—'}</td>
-                    <td style={{ padding: '14px 20px', color: '#f9fafb', fontWeight: 600 }}>€{(p.total || 0).toFixed(2)}</td>
-                    <td style={{ padding: '14px 20px' }}>
+                    <td style={{ ...tdStyle, color: colors.primary, fontWeight: 700 }}>#{p.num_pedido}</td>
+                    <td style={tdStyle}>{p.fecha}</td>
+                    <td style={{ ...tdStyle, color: colors.text, fontWeight: 500 }}>{p.clientes?.nombre_cliente || '—'}</td>
+                    <td style={{ ...tdStyle, color: colors.text, fontWeight: 600 }}>€{(p.total || 0).toFixed(2)}</td>
+                    <td style={tdStyle}>
                       <span style={{
                         background: estadoColor[p.estado] + '20', color: estadoColor[p.estado],
                         padding: '4px 10px', borderRadius: 6, fontSize: 12, fontWeight: 600,
@@ -156,7 +150,7 @@ export default function UserPedidosPage() {
                   </tr>
                 ))}
                 {filtered.length === 0 && (
-                  <tr><td colSpan={5} style={{ padding: '40px', textAlign: 'center', color: '#4b5563' }}>No tienes pedidos</td></tr>
+                  <tr><td colSpan={5} style={{ padding: '40px', textAlign: 'center', color: colors.textDim }}>No tienes pedidos</td></tr>
                 )}
               </tbody>
             </table>
@@ -165,22 +159,22 @@ export default function UserPedidosPage() {
 
         {showModal && (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200 }}>
-            <div style={{ background: '#0f1117', border: '1px solid #2d3348', borderRadius: 16, padding: 32, width: 520, maxHeight: '90vh', overflowY: 'auto' }}>
-              <h2 style={{ color: '#f9fafb', fontSize: 18, fontWeight: 700, marginTop: 0, marginBottom: 24 }}>Nuevo pedido</h2>
+            <div style={{ background: colors.surface, border: `1px solid ${colors.border2}`, borderRadius: 16, padding: 32, width: 520, maxHeight: '90vh', overflowY: 'auto' }}>
+              <h2 style={{ color: colors.text, fontSize: 18, fontWeight: 700, marginTop: 0, marginBottom: 24 }}>Nuevo pedido</h2>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 20 }}>
                 <div style={{ gridColumn: '1 / -1' }}>
-                  <label style={{ color: '#9ca3af', fontSize: 12, display: 'block', marginBottom: 6 }}>Cliente *</label>
+                  <label style={{ color: colors.textMuted, fontSize: 12, display: 'block', marginBottom: 6 }}>Cliente *</label>
                   <select value={form.cliente_id} onChange={e => setForm({ ...form, cliente_id: e.target.value })} style={inputStyle}>
                     <option value="">Seleccionar cliente</option>
                     {clientes.map(c => <option key={c.id} value={c.id}>{c.nombre_cliente}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label style={{ color: '#9ca3af', fontSize: 12, display: 'block', marginBottom: 6 }}>Fecha</label>
+                  <label style={{ color: colors.textMuted, fontSize: 12, display: 'block', marginBottom: 6 }}>Fecha</label>
                   <input type="date" value={form.fecha} onChange={e => setForm({ ...form, fecha: e.target.value })} style={inputStyle} />
                 </div>
                 <div>
-                  <label style={{ color: '#9ca3af', fontSize: 12, display: 'block', marginBottom: 6 }}>Estado</label>
+                  <label style={{ color: colors.textMuted, fontSize: 12, display: 'block', marginBottom: 6 }}>Estado</label>
                   <select value={form.estado} onChange={e => setForm({ ...form, estado: e.target.value })} style={inputStyle}>
                     <option value="pendiente">Pendiente</option>
                     <option value="confirmado">Confirmado</option>
@@ -189,7 +183,7 @@ export default function UserPedidosPage() {
               </div>
 
               <div style={{ marginBottom: 16 }}>
-                <div style={{ color: '#e5e7eb', fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Productos</div>
+                <div style={{ color: colors.text, fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Productos</div>
                 {lineas.map((linea, idx) => (
                   <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 80px 100px 32px', gap: 8, marginBottom: 8 }}>
                     <select value={linea.producto_id}
@@ -210,22 +204,22 @@ export default function UserPedidosPage() {
                       onChange={e => { const u = [...lineas]; u[idx].precio_venta = parseFloat(e.target.value) || 0; setLineas(u); }}
                       style={inputStyle} placeholder="€" />
                     <button onClick={() => setLineas(lineas.filter((_, i) => i !== idx))}
-                      style={{ background: 'transparent', border: '1px solid #374151', borderRadius: 6, color: '#ef4444', cursor: 'pointer', fontSize: 16 }}>×</button>
+                      style={{ background: 'transparent', border: `1px solid ${colors.border}`, borderRadius: 6, color: colors.danger, cursor: 'pointer', fontSize: 16 }}>×</button>
                   </div>
                 ))}
                 <button onClick={() => setLineas([...lineas, { producto_id: '', cantidad: 1, precio_venta: 0 }])}
-                  style={{ background: 'transparent', border: '1px dashed #2d3348', borderRadius: 8, color: '#6b7280', padding: '8px 16px', cursor: 'pointer', fontSize: 13, width: '100%', fontFamily: "'DM Sans', sans-serif" }}>
+                  style={{ background: 'transparent', border: `1px dashed ${colors.border2}`, borderRadius: 8, color: colors.textDim, padding: '8px 16px', cursor: 'pointer', fontSize: 13, width: '100%', fontFamily: 'var(--font-sans), system-ui, sans-serif' }}>
                   + Añadir producto
                 </button>
               </div>
 
-              <div style={{ textAlign: 'right', color: '#f9fafb', fontWeight: 700, fontSize: 16, marginBottom: 20 }}>
+              <div style={{ textAlign: 'right', color: colors.text, fontWeight: 700, fontSize: 16, marginBottom: 20 }}>
                 Total: €{lineas.reduce((sum, l) => sum + l.cantidad * l.precio_venta, 0).toFixed(2)}
               </div>
 
               <div style={{ display: 'flex', gap: 12 }}>
-                <button onClick={() => setShowModal(false)} style={{ flex: 1, padding: '10px', background: 'transparent', border: '1px solid #2d3348', borderRadius: 8, color: '#9ca3af', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Cancelar</button>
-                <button onClick={handleSave} disabled={saving || !form.cliente_id} style={{ flex: 1, padding: '10px', background: '#3b82f6', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", opacity: saving ? 0.7 : 1 }}>
+                <button onClick={() => setShowModal(false)} style={{ flex: 1, padding: '10px', background: 'transparent', border: `1px solid ${colors.border2}`, borderRadius: 8, color: colors.textMuted, cursor: 'pointer', fontFamily: 'var(--font-sans), system-ui, sans-serif' }}>Cancelar</button>
+                <button onClick={handleSave} disabled={saving || !form.cliente_id} style={{ flex: 1, padding: '10px', background: colors.primary, border: 'none', borderRadius: 8, color: '#fff', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-sans), system-ui, sans-serif', opacity: saving ? 0.7 : 1 }}>
                   {saving ? 'Guardando...' : 'Crear pedido'}
                 </button>
               </div>
