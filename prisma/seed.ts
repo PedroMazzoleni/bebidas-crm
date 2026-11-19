@@ -1,9 +1,15 @@
 import { PrismaClient } from '@prisma/client'
+import { PrismaD1 } from '@prisma/adapter-d1'
 import bcrypt from 'bcryptjs'
+import { getPlatformProxy } from 'wrangler'
 
-const prisma = new PrismaClient()
+// Rellena la D1 local (.wrangler/) con datos de ejemplo.
+// Después: `npx wrangler d1 export bebidas-crm --local --no-schema --output prisma/seed.sql`
+let prisma: PrismaClient
 
 async function main() {
+  const proxy = await getPlatformProxy<CloudflareEnv>()
+  prisma = new PrismaClient({ adapter: new PrismaD1(proxy.env.DB) })
   console.log('Limpiando base de datos...')
   await prisma.lineaPedido.deleteMany()
   await prisma.pedido.deleteMany()
@@ -14,7 +20,7 @@ async function main() {
   await prisma.profile.deleteMany()
 
   console.log('Creando usuarios...')
-  const hash = (p: string) => bcrypt.hashSync(p, 10)
+  const hash = (p: string) => bcrypt.hashSync(p, 6) // coste bajo: son credenciales demo públicas y Workers limita la CPU
 
   await prisma.profile.createMany({
     data: [
@@ -216,4 +222,4 @@ async function main() {
 
 main()
   .catch(e => { console.error(e); process.exit(1) })
-  .finally(() => prisma.$disconnect())
+  .finally(async () => { await prisma?.$disconnect(); process.exit(0) })
